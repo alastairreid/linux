@@ -811,6 +811,10 @@ else ifdef CONFIG_RUST_OPT_LEVEL_Z
 KBUILD_RUSTCFLAGS += -Copt-level=z
 endif
 
+# KBUILD_RUSTCFLAGS += -Clto
+# KBUILD_RUSTCFLAGS += -Cembed-bitcode=yes
+KBUILD_RUSTCFLAGS += --emit=llvm-bc
+
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-allow-store-data-races)

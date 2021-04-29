@@ -14,11 +14,19 @@ unsafe impl GlobalAlloc for KernelAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // `krealloc()` is used instead of `kmalloc()` because the latter is
         // an inline function and cannot be bound to as a result.
-        bindings::krealloc(ptr::null(), layout.size(), bindings::GFP_KERNEL) as *mut u8
+        // bindings::krealloc(ptr::null(), layout.size(), bindings::GFP_KERNEL) as *mut u8
+        extern "C" {
+            pub fn realloc(arg1: *const c_types::c_void, arg2: usize) -> *mut c_types::c_void;
+        }
+        realloc(ptr::null(), layout.size()) as *mut u8
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        bindings::kfree(ptr as *const c_types::c_void);
+        // bindings::kfree(ptr as *const c_types::c_void);
+        extern "C" {
+            pub fn free(arg1: *const c_types::c_void);
+        }
+        free(ptr as *const c_types::c_void);
     }
 }
 
@@ -32,33 +40,43 @@ fn oom(_layout: Layout) -> ! {
 // let's generate them ourselves instead.
 #[no_mangle]
 pub fn __rust_alloc(size: usize, _align: usize) -> *mut u8 {
-    unsafe { bindings::krealloc(core::ptr::null(), size, bindings::GFP_KERNEL) as *mut u8 }
+    // unsafe { bindings::krealloc(core::ptr::null(), size, bindings::GFP_KERNEL) as *mut u8 }
+    unsafe {
+        extern "C" { fn malloc(size: usize) -> *mut c_types::c_void; }
+        malloc(size) as *mut u8
+    }
 }
 
 #[no_mangle]
 pub fn __rust_dealloc(ptr: *mut u8, _size: usize, _align: usize) {
-    unsafe { bindings::kfree(ptr as *const c_types::c_void) };
+    // unsafe { bindings::kfree(ptr as *const c_types::c_void) };
+    extern "C" { fn free(arg1: *const c_types::c_void); }
+    unsafe { free(ptr as *const c_types::c_void); }
 }
 
 #[no_mangle]
 pub fn __rust_realloc(ptr: *mut u8, _old_size: usize, _align: usize, new_size: usize) -> *mut u8 {
     unsafe {
-        bindings::krealloc(
-            ptr as *const c_types::c_void,
-            new_size,
-            bindings::GFP_KERNEL,
-        ) as *mut u8
+        // bindings::krealloc(
+        //     ptr as *const c_types::c_void,
+        //     new_size,
+        //     bindings::GFP_KERNEL,
+        // ) as *mut u8
+        extern "C" { fn realloc(arg1: *const c_types::c_void, arg2: usize) -> *mut c_types::c_void; }
+        realloc(ptr as *const c_types::c_void, new_size) as *mut u8
     }
 }
 
 #[no_mangle]
 pub fn __rust_alloc_zeroed(size: usize, _align: usize) -> *mut u8 {
     unsafe {
-        bindings::krealloc(
-            core::ptr::null(),
-            size,
-            bindings::GFP_KERNEL | bindings::__GFP_ZERO,
-        ) as *mut u8
+        // bindings::krealloc(
+        //     core::ptr::null(),
+        //     size,
+        //     bindings::GFP_KERNEL | bindings::__GFP_ZERO,
+        // ) as *mut u8
+        extern "C" { fn calloc(arg1: usize, arg2: usize) -> *mut c_types::c_void; }
+        calloc(1, size) as *mut u8
     }
 }
 
