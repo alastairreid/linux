@@ -301,6 +301,7 @@ quiet_cmd_rustc_o_rs = $(RUSTC_OR_CLIPPY_QUIET) $(quiet_modtag) $@
 	$(RUSTC_OR_CLIPPY) $(rust_flags) $(rust_cross_flags) \
 		-Zallow-features=allocator_api,bench_black_box,concat_idents,global_asm,try_reserve \
 		--extern alloc --extern kernel \
+		--extern verification_annotations --cfg 'feature="verifier-klee"' \
 		--crate-type rlib --out-dir $(obj) -L $(objtree)/rust/ \
 		--crate-name $(patsubst %.o,%,$(notdir $@)) $<; \
 	mv $(obj)/$(subst .o,,$(notdir $@)).d $(depfile); \

@@ -14,6 +14,56 @@ use alloc::boxed::Box;
 use core::marker::PhantomPinned;
 use core::pin::Pin;
 
+use crate::c_types;
+use crate::c_types::*;
+
+// In the verification mock version of misc_register, we
+// can only handle a small number of devices - but that is
+// enough for the tests that we write
+// Note that this mock is designed to be efficient for
+// verification - it is not required to be efficient to execute.
+const MAX_REGISTRATIONS: usize = 4;
+
+pub struct Registrations<T> {
+    list: [Option<T>; MAX_REGISTRATIONS],
+    registered: usize,
+}
+
+impl<T: Copy> Registrations<T> {
+    pub fn new() -> Self {
+        Self {
+            registered: 0,
+            list: [None; MAX_REGISTRATIONS],
+        }
+    }
+
+    pub fn add(self: &mut Self, r: T) -> c_types::c_int {
+        assert!(self.registered < MAX_REGISTRATIONS);
+        let i = self.registered;
+        self.list[i] = Some(r);
+        self.registered += 1;
+        i as c_types::c_int
+    }
+
+    // todo: rearrange this so that it return an index and then use
+    // to implement both a lookup and an unregister function
+    pub fn find(self: &mut Self, p: fn(&T) -> bool) -> Option<&T> {
+        // todo: if we really wanted to match the semantics of misc_register, entries
+        // would be searched in reverse order so that later entries can override earlier ones.
+        for i in 0..self.registered {
+            if let Some(r) = &self.list[i] {
+                if p(r) {
+                    return Some(r);
+                }
+            }
+        }
+        None
+    }
+}
+
+// static mut registrations: Registrations<&bindings::miscdevice> = Registrations::new();
+
+
 /// A registration of a miscellaneous device.
 pub struct Registration<T: Sync = ()> {
     registered: bool,
@@ -72,7 +122,20 @@ impl<T: Sync> Registration<T> {
         this.mdev.name = name.as_char_ptr();
         this.mdev.minor = minor.unwrap_or(bindings::MISC_DYNAMIC_MINOR as i32);
 
-        let ret = unsafe { bindings::misc_register(&mut this.mdev) };
+        // let ret = unsafe { bindings::misc_register(&mut this.mdev) };
+
+        // SAFETY: stores &this.mdev into a 'static but the drop method removes it
+        // again so it's all fine.
+        // let mdev = unsafe { &this.mdev as &'static bindings::miscdevice };
+
+        // todo: in the test environment, instead of keeping a registry of &this.mdev, would we be better registering &this
+        // todo: in the test environment, do we want to access drivers through the existing
+        // major/minor lookup mechanism or do we want to expose the Rust objects/types and access drivers
+        // through Rust's type system?
+        // todo: the following ignores MISC_DYNAMIC_MINOR - a problem for the rust_semaphore sample
+        // and Android binder
+        // let ret = registrations.add(mdev);
+        let ret = 0;
         if ret < 0 {
             return Err(Error::from_kernel_errno(ret));
         }
@@ -107,7 +170,7 @@ impl<T: Sync> Drop for Registration<T> {
     /// Removes the registration from the kernel if it has completed successfully before.
     fn drop(&mut self) {
         if self.registered {
-            unsafe { bindings::misc_deregister(&mut self.mdev) }
+            // unsafe { bindings::misc_deregister(&mut self.mdev) }
         }
     }
 }

@@ -12,6 +12,8 @@ use core::fmt;
 use crate::bindings;
 use crate::c_types::{c_char, c_void};
 
+use crate::c_types::c_int;
+
 // Called from `vsprintf` with format specifier `%pA`.
 #[no_mangle]
 unsafe fn rust_fmt_argument(buf: *mut c_char, end: *mut c_char, ptr: *const c_void) -> *mut c_char {
@@ -138,6 +140,15 @@ pub unsafe fn call_printk(
             module_name.as_ptr(),
             &args as *const _ as *const c_void,
         );
+    }
+}
+
+pub fn klee_print(msg: &str) {
+    extern "C" {
+        fn klee_print_expr(msg: *const u8, _dummy: c_int);
+    }
+    unsafe {
+        klee_print_expr(msg.as_bytes().as_ptr(), 0);
     }
 }
 
@@ -379,6 +390,7 @@ macro_rules! pr_notice (
 #[macro_export]
 #[doc(alias = "print")]
 macro_rules! pr_info (
+    ($arg:expr) => ( $crate::print::klee_print($arg) );
     ($($arg:tt)*) => (
         $crate::print_macro!($crate::print::format_strings::INFO, false, $($arg)*)
     )

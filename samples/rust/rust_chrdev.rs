@@ -8,6 +8,10 @@
 use kernel::prelude::*;
 use kernel::{c_str, chrdev, file_operations::FileOperations};
 
+use kernel::{c_types, user_ptr::UserSlicePtr, file::File};
+use alloc::vec::Vec;
+use kernel::Error;
+
 module! {
     type: RustChrdev,
     name: b"rust_chrdev",
@@ -48,4 +52,26 @@ impl Drop for RustChrdev {
     fn drop(&mut self) {
         pr_info!("Rust character device sample (exit)\n");
     }
+}
+
+#[no_mangle]
+pub fn test_fileops() -> Result<()> {
+    let f: Box<RustFile> = Box::new(RustFile{});
+
+    let len: usize = 128; // any size that kmalloc accepts should do here
+    let mut data: Vec<u8> = Vec::with_capacity(len);
+    let buf: *mut u8 = data.as_mut_ptr();
+
+    let file: File = File::make_fake_file();
+    let mut data = unsafe { UserSlicePtr::new(buf as *mut c_types::c_void, len).writer() };
+    let offset: u64 = 0;
+
+    // note: we expect the following to fail because the above code does
+    // not implement any FileOperations so we should get EINVAL
+    match f.read(&file, &mut data, offset) {
+        Err(Error(rc)) => pr_info!("read error: {}", rc),
+        Ok(sz) => pr_info!("read {} bytes", sz),
+    }
+
+    Ok(())
 }

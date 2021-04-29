@@ -530,6 +530,7 @@ KBUILD_RUST_TARGET := $(srctree)/arch/$(SRCARCH)/rust/target.json
 KBUILD_RUSTFLAGS := --emit=dep-info,obj,metadata --edition=2018 \
 		     -Cpanic=abort -Cembed-bitcode=n -Clto=n -Crpath=n \
 		     -Cforce-unwind-tables=n -Ccodegen-units=1 \
+                     --cfg 'feature="verifier-klee"' \
 		     -Zbinary_dep_depinfo=y -Zsymbol-mangling-version=v0 \
 		     -Dunsafe_op_in_unsafe_fn -Drust_2018_idioms \
 		     -Wmissing_docs
@@ -842,6 +843,10 @@ KBUILD_RUSTFLAGS += -Copt-level=s
 else ifdef CONFIG_RUST_OPT_LEVEL_Z
 KBUILD_RUSTFLAGS += -Copt-level=z
 endif
+
+# KBUILD_RUSTCFLAGS += -Clto
+# KBUILD_RUSTCFLAGS += -Cembed-bitcode=yes
+KBUILD_RUSTCFLAGS += --emit=llvm-bc
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)

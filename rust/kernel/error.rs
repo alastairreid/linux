@@ -21,7 +21,7 @@ use core::str::{self, Utf8Error};
 ///
 /// The value is a valid `errno` (i.e. `>= -MAX_ERRNO && < 0`).
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Error(c_types::c_int);
+pub struct Error(pub c_types::c_int);
 
 impl Error {
     /// Operation not permitted.
