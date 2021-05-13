@@ -73,7 +73,7 @@ impl<T: ?Sized> Mutex<T> {
 
 impl<T: ?Sized> NeedsLockClass for Mutex<T> {
     unsafe fn init(self: Pin<&Self>, name: &'static CStr, key: *mut bindings::lock_class_key) {
-        bindings::__mutex_init(self.mutex.get(), name.as_char_ptr(), key);
+        // bindings::__mutex_init(self.mutex.get(), name.as_char_ptr(), key);
     }
 }
 
@@ -83,17 +83,17 @@ impl<T: ?Sized> Lock for Mutex<T> {
     #[cfg(not(CONFIG_DEBUG_LOCK_ALLOC))]
     fn lock_noguard(&self) {
         // SAFETY: `mutex` points to valid memory.
-        unsafe { bindings::mutex_lock(self.mutex.get()) };
+        // unsafe { bindings::mutex_lock(self.mutex.get()) };
     }
 
     #[cfg(CONFIG_DEBUG_LOCK_ALLOC)]
     fn lock_noguard(&self) {
         // SAFETY: `mutex` points to valid memory.
-        unsafe { bindings::mutex_lock_nested(self.mutex.get(), 0) };
+        // unsafe { bindings::mutex_lock_nested(self.mutex.get(), 0) };
     }
 
     unsafe fn unlock(&self) {
-        bindings::mutex_unlock(self.mutex.get());
+        // bindings::mutex_unlock(self.mutex.get());
     }
 
     fn locked_data(&self) -> &UnsafeCell<T> {
