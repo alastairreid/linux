@@ -59,7 +59,7 @@ impl<T: Copy> Registrations<T> {
     }
 }
 
-static mut registrations: Registrations<&bindings::miscdevice> = Registrations::new();
+// static mut registrations: Registrations<&bindings::miscdevice> = Registrations::new();
 
 
 /// A registration of a miscellaneous device.
@@ -124,8 +124,16 @@ impl<T: Sync> Registration<T> {
 
         // SAFETY: stores &this.mdev into a 'static but the drop method removes it
         // again so it's all fine.
-        let mdev = unsafe { &this.mdev as &'static bindings::miscdevice };
-        let ret = registrations.add(mdev);
+        // let mdev = unsafe { &this.mdev as &'static bindings::miscdevice };
+
+        // todo: in the test environment, instead of keeping a registry of &this.mdev, would we be better registering &this
+        // todo: in the test environment, do we want to access drivers through the existing
+        // major/minor lookup mechanism or do we want to expose the Rust objects/types and access drivers
+        // through Rust's type system?
+        // todo: the following ignores MISC_DYNAMIC_MINOR - a problem for the rust_semaphore sample
+        // and Android binder
+        // let ret = registrations.add(mdev);
+        let ret = 0;
         if ret < 0 {
             return Err(Error::from_kernel_errno(ret));
         }
