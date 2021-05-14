@@ -162,7 +162,7 @@ pub fn call_printk_cont(args: fmt::Arguments<'_>) {
     extern "C" {
         fn klee_print_expr(msg: *const u8, _dummy: c_int);
     }
-    klee_print_expr(string.as_ptr(), 0)
+    unsafe { klee_print_expr(string.as_ptr(), 42) }
 }
 
 /// Performs formatting and forwards the string to [`call_printk`].
