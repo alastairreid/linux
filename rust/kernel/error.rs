@@ -17,7 +17,7 @@ use core::str::{self, Utf8Error};
 /// The kernel defines a set of integer generic error codes based on C and
 /// POSIX ones. These codes may have a more specific meaning in some contexts.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Error(c_types::c_int);
+pub struct Error(pub c_types::c_int);
 
 impl Error {
     /// Invalid argument.

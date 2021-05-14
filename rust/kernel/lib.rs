@@ -41,7 +41,7 @@ pub mod bindings;
 pub mod buffer;
 pub mod c_types;
 pub mod chrdev;
-mod error;
+pub mod error;
 pub mod file;
 pub mod file_operations;
 pub mod miscdev;
