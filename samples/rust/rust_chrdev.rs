@@ -59,29 +59,24 @@ impl Drop for RustChrdev {
 
 #[no_mangle]
 pub fn test_fileops() -> KernelResult<()> {
-    // it is not clear to me how this is being called automatically
-    // let dev = RustChrdev::init()?;
-
     let ctx = ();
     let f: Box<RustFile> = RustFile::open(&ctx)?;
-
-    // note: we expect the following to fail because the above code does
-    // not implement any FileOperations so we should get Error::EINVAL
 
     let len: usize = 128; // any size that kmalloc accepts should do here
     let mut data: Vec<u8> = Vec::with_capacity(len);
     let buf: *mut u8 = data.as_mut_ptr();
 
-    // how do we build a file?
-    // I think we would need to have the kernel do that - but we don't want
-    // to call the kernel code so either
-    // - use a null ptr and hope nobody uses it
-    // or
+    // How do we build a file?
+    // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
+    // - use a null ptr and hope nobody uses it; or
     // - modify file_operations::File implementation to suit our needs
     let fptr: *const bindings::file = core::ptr::null();
     let file: File = unsafe { File::from_ptr(fptr) }; // hack: I had to make this function public to allow this
     let mut data = unsafe { UserSlicePtr::new(buf as *mut c_types::c_void, len).writer() };
     let offset: u64 = 0;
+
+    // note: we expect the following to fail because the above code does
+    // not implement any FileOperations so we should get EINVAL
     match f.read(&file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("read error: {}", rc),
         Ok(sz) => pr_info!("read {} bytes", sz),
