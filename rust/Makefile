@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0
 
 obj-$(CONFIG_RUST) += core.o compiler_builtins.o helpers.o
-obj-$(CONFIG_RUST) += stubs.o
 extra-$(CONFIG_RUST) += exports_core_generated.h
 
 extra-$(CONFIG_RUST) += libmodule.so
 
 extra-$(CONFIG_RUST) += bindings_generated.rs
 obj-$(CONFIG_RUST) += alloc.o kernel.o
+obj-$(CONFIG_RUST) += rstubs.o
+obj-$(CONFIG_RUST) += stubs.o
 extra-$(CONFIG_RUST) += exports_alloc_generated.h exports_kernel_generated.h
 
 ifdef CONFIG_RUST_BUILD_ASSERT_DENY
