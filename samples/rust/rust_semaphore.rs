@@ -199,8 +199,42 @@ fn make_writer(len: usize) -> UserSlicePtrWriter {
     unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() }
 }
 
+fn mk_file_state<T: Sync, FS: FileOpener<T> + FileOperations>(reg: &Registration<T>) -> KernelResult<FS::Wrapper> {
+    let sema: &T = &reg.context;
+    FS::open(&sema)
+}
+
+fn test_write<F: FileOperations>(file_state: &F) {
+    pr_info!("Calling write");
+    let mut data = make_reader(128); // any size that kmalloc accepts should do here
+    let offset: u64 = 0;
+    match FileOperations::write(file_state, &mut data, offset) {
+        Err(Error(rc)) => pr_info!("write error: {}", rc),
+        Ok(sz) => pr_info!("write {} bytes", sz),
+    }
+    pr_info!("Called write");
+}
+
+fn test_read<F: FileOperations>(file_state: &F, file: &File) {
+    pr_info!("Calling read");
+    let mut data = make_writer(128); // any size that kmalloc accepts should do here
+    let offset: u64 = 0;
+    match FileOperations::read(file_state, file, &mut data, offset) {
+        Err(Error(rc)) => pr_info!("read error: {}", rc),
+        Ok(sz) => pr_info!("read {} bytes", sz),
+    }
+    pr_info!("Called read");
+}
+
 #[no_mangle]
-pub fn test_fileops() -> KernelResult<()>
+pub fn test_fileops() -> KernelResult<()> {
+    let rust_sem = RustSemaphore::init()?;
+    pr_info!("Initialized");
+
+    test_read_write(&rust_sem._dev)
+}
+
+fn test_read_write(m: &Registration<Arc<Semaphore>>) -> KernelResult<()>
 {
     // 1) Use RustSemaphore::init() to create module state sema
     // 2) Use FileState::open(sema) to get Box<FileState>
@@ -210,36 +244,17 @@ pub fn test_fileops() -> KernelResult<()>
     //    - ioctl.read(IOCTL_GET_READ_COUNT)
     //    - ioctl.write(IOCTL_SET_READ_COUNT)
     //    - and all other operations
-    let rust_sem = RustSemaphore::init()?;
-    pr_info!("Initialized");
 
     // get a FileState
-    let reg: &Pin<Box<Registration<Arc<Semaphore>>>> = &rust_sem._dev;
-    let sema: &Arc<Semaphore> = &(*reg).context;
-    let file_state: FileState = *FileState::open(&sema)?;
+    let file_state = *mk_file_state::<Arc<Semaphore>, FileState>(m)?;
     pr_info!("Got filestate");
 
-    // build a File
-    let file = make_fake_file();
-
     // write some data *before* reading
-    pr_info!("Calling write");
-    let mut data = make_reader(128); // any size that kmalloc accepts should do here
-    let offset: u64 = 0;
-    match FileOperations::write(&file_state, &mut data, offset) {
-        Err(Error(rc)) => pr_info!("write error: {}", rc),
-        Ok(sz) => pr_info!("write {} bytes", sz),
-    }
-    pr_info!("Called write");
+    test_write(&file_state);
 
     // read some data (will block if we have not written first)
-    pr_info!("Calling read");
-    let mut data = make_writer(128); // any size that kmalloc accepts should do here
-    match FileOperations::read(&file_state, &file, &mut data, offset) {
-        Err(Error(rc)) => pr_info!("read error: {}", rc),
-        Ok(sz) => pr_info!("read {} bytes", sz),
-    }
-    pr_info!("Called read");
+    let file = make_fake_file();
+    test_read(&file_state, &file);
 
     Ok(())
 }
