@@ -180,6 +180,25 @@ use alloc::vec::Vec;
 use kernel::bindings;
 use kernel::{c_types, user_ptr::UserSlicePtr};
 
+fn make_fake_file() -> File {
+    // How do we build a file?
+    // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
+    // - use a null ptr and hope nobody uses it; or
+    // - modify file_operations::File implementation to suit our needs
+    let fptr: *const bindings::file = core::ptr::null();
+    unsafe { File::from_ptr(fptr) } // hack: I had to make this function public to allow this
+}
+
+fn make_reader(len: usize) -> UserSlicePtrReader {
+    let mut data: Vec<u8> = Vec::with_capacity(len);
+    unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).reader() }
+}
+
+fn make_writer(len: usize) -> UserSlicePtrWriter {
+    let mut data: Vec<u8> = Vec::with_capacity(len);
+    unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() }
+}
+
 #[no_mangle]
 pub fn test_fileops() -> KernelResult<()>
 {
@@ -201,34 +220,21 @@ pub fn test_fileops() -> KernelResult<()>
     pr_info!("Got filestate");
 
     // build a File
-    // How do we build a file?
-    // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
-    // - use a null ptr and hope nobody uses it; or
-    // - modify file_operations::File implementation to suit our needs
-    let fptr: *const bindings::file = core::ptr::null();
-    let file: File = unsafe { File::from_ptr(fptr) }; // hack: I had to make this function public to allow this
-    pr_info!("Made fake file");
-
-    let len: usize = 128; // any size that kmalloc accepts should do here
-
-    let mut data: Vec<u8> = Vec::with_capacity(len);
-    let mut data = unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).reader() };
-
-    let offset: u64 = 0;
+    let file = make_fake_file();
 
     // write some data *before* reading
     pr_info!("Calling write");
+    let mut data = make_reader(128); // any size that kmalloc accepts should do here
+    let offset: u64 = 0;
     match FileOperations::write(&file_state, &mut data, offset) {
         Err(Error(rc)) => pr_info!("write error: {}", rc),
         Ok(sz) => pr_info!("write {} bytes", sz),
     }
     pr_info!("Called write");
 
-    let mut data: Vec<u8> = Vec::with_capacity(len);
-    let mut data = unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() };
-
     // read some data (will block if we have not written first)
     pr_info!("Calling read");
+    let mut data = make_writer(128); // any size that kmalloc accepts should do here
     match FileOperations::read(&file_state, &file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("read error: {}", rc),
         Ok(sz) => pr_info!("read {} bytes", sz),
