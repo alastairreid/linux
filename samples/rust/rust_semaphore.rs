@@ -181,38 +181,59 @@ use kernel::bindings;
 use kernel::{c_types, user_ptr::UserSlicePtr};
 
 #[no_mangle]
-pub fn test_fileops() -> KernelResult<()> {
+pub fn test_fileops() -> KernelResult<()>
+{
     // 1) Use RustSemaphore::init() to create module state sema
     // 2) Use FileState::open(sema) to get Box<FileState>
     // 3) Test the following operations
-    //    - read
-    //    - write
+    //    - read // should block unless semaphore >= 1
+    //    - write // increments semaphore by either 1 or write size (can't figure out which)
     //    - ioctl.read(IOCTL_GET_READ_COUNT)
     //    - ioctl.write(IOCTL_SET_READ_COUNT)
     //    - and all other operations
-    let filestate = RustSemaphore::init()?;
-    let reg: &Pin<Box<Registration<Arc<Semaphore>>>> = &filestate._dev;
-    let sema: &Arc<Semaphore> = &(*reg).context;
-    let f = FileState::open(&sema)?;
+    let rust_sem = RustSemaphore::init()?;
+    pr_info!("Initialized");
 
+    // get a FileState
+    let reg: &Pin<Box<Registration<Arc<Semaphore>>>> = &rust_sem._dev;
+    let sema: &Arc<Semaphore> = &(*reg).context;
+    let file_state: FileState = *FileState::open(&sema)?;
+    pr_info!("Got filestate");
+
+    // build a File
     // How do we build a file?
     // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
     // - use a null ptr and hope nobody uses it; or
     // - modify file_operations::File implementation to suit our needs
     let fptr: *const bindings::file = core::ptr::null();
     let file: File = unsafe { File::from_ptr(fptr) }; // hack: I had to make this function public to allow this
+    pr_info!("Made fake file");
 
     let len: usize = 128; // any size that kmalloc accepts should do here
-    let mut data: Vec<u8> = Vec::with_capacity(len);
-    let buf: *mut u8 = data.as_mut_ptr();
 
-    let mut data = unsafe { UserSlicePtr::new(buf as *mut c_types::c_void, len).writer() };
+    let mut data: Vec<u8> = Vec::with_capacity(len);
+    let mut data = unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).reader() };
+
     let offset: u64 = 0;
 
-    match FileOperations::read(&*f, &file, &mut data, offset) {
+    // write some data *before* reading
+    pr_info!("Calling write");
+    match FileOperations::write(&file_state, &mut data, offset) {
+        Err(Error(rc)) => pr_info!("write error: {}", rc),
+        Ok(sz) => pr_info!("write {} bytes", sz),
+    }
+    pr_info!("Called write");
+
+    let mut data: Vec<u8> = Vec::with_capacity(len);
+    let mut data = unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() };
+
+    // read some data (will block if we have not written first)
+    pr_info!("Calling read");
+    match FileOperations::read(&file_state, &file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("read error: {}", rc),
         Ok(sz) => pr_info!("read {} bytes", sz),
     }
+    pr_info!("Called read");
 
     Ok(())
 }
