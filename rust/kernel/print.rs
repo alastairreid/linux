@@ -134,16 +134,20 @@ pub unsafe fn call_printk(
     args: fmt::Arguments<'_>,
 ) {
     // `printk` does not seem to fail in any path.
-    // bindings::printk(
-    //     format_string.as_ptr() as _,
-    //     module_name.as_ptr(),
-    //     &args as *const _ as *const c_void,
-    // );
+    bindings::printk(
+        format_string.as_ptr() as _,
+        module_name.as_ptr(),
+        &args as *const _ as *const c_void,
+    );
+}
 
+pub fn klee_print(msg: &str) {
     extern "C" {
         fn klee_print_expr(msg: *const u8, _dummy: c_int);
     }
-    klee_print_expr(format_string.as_ptr(), 0)
+    unsafe {
+        klee_print_expr(msg.as_bytes().as_ptr(), 0);
+    }
 }
 
 /// Prints a message via the kernel's [`printk`] for the `CONT` level.
@@ -156,15 +160,12 @@ pub fn call_printk_cont(args: fmt::Arguments<'_>) {
     // `printk` does not seem to fail in any path.
     //
     // SAFETY: The format string is fixed.
-    // unsafe {
-    //     bindings::printk(
-    //         format_strings::CONT.as_ptr() as _,
-    //         &args as *const _ as *const c_void,
-    //     );
-    // extern "C" {
-    //     fn klee_print_expr(msg: *const u8, _dummy: c_int);
-    // }
-    // unsafe { klee_print_expr(string.as_ptr(), 42) }
+    unsafe {
+        bindings::printk(
+            format_strings::CONT.as_ptr() as _,
+            &args as *const _ as *const c_void,
+        );
+    }
 }
 
 /// Performs formatting and forwards the string to [`call_printk`].
@@ -370,6 +371,7 @@ macro_rules! pr_notice (
 #[macro_export]
 #[doc(alias = "print")]
 macro_rules! pr_info (
+    ($arg:expr) => ( $crate::print::klee_print($arg) );
     ($($arg:tt)*) => (
         $crate::print_macro!($crate::print::format_strings::INFO, false, $($arg)*)
     )
