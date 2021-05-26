@@ -12,6 +12,8 @@ use core::fmt;
 use crate::bindings;
 use crate::c_types::{c_char, c_void};
 
+use crate::c_types::c_int;
+
 // Called from `vsprintf` with format specifier `%pA`.
 #[no_mangle]
 unsafe fn rust_fmt_argument(buf: *mut c_char, end: *mut c_char, ptr: *const c_void) -> *mut c_char {
@@ -141,7 +143,7 @@ pub unsafe fn call_printk(
     extern "C" {
         fn klee_print_expr(msg: *const u8, _dummy: c_int);
     }
-    klee_print_expr(string.as_ptr(), 0)
+    klee_print_expr(format_string.as_ptr(), 0)
 }
 
 /// Prints a message via the kernel's [`printk`] for the `CONT` level.
@@ -159,10 +161,10 @@ pub fn call_printk_cont(args: fmt::Arguments<'_>) {
     //         format_strings::CONT.as_ptr() as _,
     //         &args as *const _ as *const c_void,
     //     );
-    extern "C" {
-        fn klee_print_expr(msg: *const u8, _dummy: c_int);
-    }
-    unsafe { klee_print_expr(string.as_ptr(), 42) }
+    // extern "C" {
+    //     fn klee_print_expr(msg: *const u8, _dummy: c_int);
+    // }
+    // unsafe { klee_print_expr(string.as_ptr(), 42) }
 }
 
 /// Performs formatting and forwards the string to [`call_printk`].

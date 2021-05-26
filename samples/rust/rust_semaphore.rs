@@ -177,17 +177,7 @@ impl IoctlHandler for FileState {
 }
 
 use alloc::vec::Vec;
-use kernel::bindings;
 use kernel::{c_types, user_ptr::UserSlicePtr};
-
-fn make_fake_file() -> File {
-    // How do we build a file?
-    // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
-    // - use a null ptr and hope nobody uses it; or
-    // - modify file_operations::File implementation to suit our needs
-    let fptr: *const bindings::file = core::ptr::null();
-    unsafe { File::from_ptr(fptr) } // hack: I had to make this function public to allow this
-}
 
 fn make_reader(len: usize) -> UserSlicePtrReader {
     let mut data: Vec<u8> = Vec::with_capacity(len);
@@ -199,16 +189,16 @@ fn make_writer(len: usize) -> UserSlicePtrWriter {
     unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() }
 }
 
-fn mk_file_state<T: Sync, FS: FileOpener<T> + FileOperations>(reg: &Registration<T>) -> KernelResult<FS::Wrapper> {
+fn mk_file_state<T: Sync, FS: FileOpener<T> + FileOperations>(reg: &Registration<T>) -> Result<FS::Wrapper> {
     let sema: &T = &reg.context;
     FS::open(&sema)
 }
 
-fn test_write<F: FileOperations>(file_state: &F) {
+fn test_write<F: FileOperations>(file_state: &F, file: &File) {
     pr_info!("Calling write");
     let mut data = make_reader(128); // any size that kmalloc accepts should do here
     let offset: u64 = 0;
-    match FileOperations::write(file_state, &mut data, offset) {
+    match FileOperations::write(file_state, file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("write error: {}", rc),
         Ok(sz) => pr_info!("write {} bytes", sz),
     }
@@ -227,14 +217,14 @@ fn test_read<F: FileOperations>(file_state: &F, file: &File) {
 }
 
 #[no_mangle]
-pub fn test_fileops() -> KernelResult<()> {
+pub fn test_fileops() -> Result<()> {
     let rust_sem = RustSemaphore::init()?;
     pr_info!("Initialized");
 
     test_read_write(&rust_sem._dev)
 }
 
-fn test_read_write(m: &Registration<Arc<Semaphore>>) -> KernelResult<()>
+fn test_read_write(m: &Registration<Arc<Semaphore>>) -> Result<()>
 {
     // 1) Use RustSemaphore::init() to create module state sema
     // 2) Use FileState::open(sema) to get Box<FileState>
@@ -249,11 +239,12 @@ fn test_read_write(m: &Registration<Arc<Semaphore>>) -> KernelResult<()>
     let file_state = *mk_file_state::<Arc<Semaphore>, FileState>(m)?;
     pr_info!("Got filestate");
 
+    let file = File::make_fake_file();
+
     // write some data *before* reading
-    test_write(&file_state);
+    test_write(&file_state, &file);
 
     // read some data (will block if we have not written first)
-    let file = make_fake_file();
     test_read(&file_state, &file);
 
     Ok(())

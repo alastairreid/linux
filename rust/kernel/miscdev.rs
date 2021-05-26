@@ -14,6 +14,8 @@ use alloc::boxed::Box;
 use core::marker::PhantomPinned;
 use core::pin::Pin;
 
+use crate::c_types;
+use crate::c_types::*;
 
 // In the verification mock version of misc_register, we
 // can only handle a small number of devices - but that is

@@ -38,4 +38,14 @@ impl File {
         // SAFETY: `File::ptr` is guaranteed to be valid by the type invariants.
         unsafe { (*self.ptr).f_flags & bindings::O_NONBLOCK == 0 }
     }
+
+    /// For testing purposes, we can make a file out of nothing
+    /// Note that this only works as long as the code being tested
+    /// does not use any of the other methods.
+    /// (This is a hack)
+    pub fn make_fake_file() -> File {
+        let fptr: *const bindings::file = core::ptr::null();
+        unsafe { File::from_ptr(fptr) }
+    }
+
 }

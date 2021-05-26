@@ -10,9 +10,8 @@ use core::pin::Pin;
 use kernel::prelude::*;
 use kernel::{c_str, chrdev, file_operations::FileOperations};
 
-use kernel::{c_types, user_ptr::UserSlicePtr, file_operations::File};
+use kernel::{c_types, user_ptr::UserSlicePtr, file::File};
 use alloc::vec::Vec;
-use kernel::bindings;
 use kernel::Error;
 
 module! {
@@ -58,20 +57,14 @@ impl Drop for RustChrdev {
 }
 
 #[no_mangle]
-pub fn test_fileops() -> KernelResult<()> {
-    let ctx = ();
-    let f: Box<RustFile> = RustFile::open(&ctx)?;
+pub fn test_fileops() -> Result<()> {
+    let f: Box<RustFile> = Box::new(RustFile{});
 
     let len: usize = 128; // any size that kmalloc accepts should do here
     let mut data: Vec<u8> = Vec::with_capacity(len);
     let buf: *mut u8 = data.as_mut_ptr();
 
-    // How do we build a file?
-    // I think we would need to have the kernel do that - but we don't want to call the kernel code so either
-    // - use a null ptr and hope nobody uses it; or
-    // - modify file_operations::File implementation to suit our needs
-    let fptr: *const bindings::file = core::ptr::null();
-    let file: File = unsafe { File::from_ptr(fptr) }; // hack: I had to make this function public to allow this
+    let file: File = File::make_fake_file();
     let mut data = unsafe { UserSlicePtr::new(buf as *mut c_types::c_void, len).writer() };
     let offset: u64 = 0;
 
