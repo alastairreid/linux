@@ -218,14 +218,9 @@ fn test_read<F: FileOperations>(file_state: &F, file: &File) {
 
 #[no_mangle]
 pub fn test_fileops() -> Result<()> {
-    let rust_sem = RustSemaphore::init()?;
+    let registration = &RustSemaphore::init()?._dev;
     pr_info!("Initialized");
 
-    test_read_write(&rust_sem._dev)
-}
-
-fn test_read_write(m: &Registration<Arc<Semaphore>>) -> Result<()>
-{
     // 1) Use RustSemaphore::init() to create module state sema
     // 2) Use FileState::open(sema) to get Box<FileState>
     // 3) Test the following operations
@@ -236,7 +231,7 @@ fn test_read_write(m: &Registration<Arc<Semaphore>>) -> Result<()>
     //    - and all other operations
 
     // get a FileState
-    let file_state = *mk_file_state::<Arc<Semaphore>, FileState>(m)?;
+    let file_state = *mk_file_state::<Arc<Semaphore>, FileState>(registration)?;
     pr_info!("Got filestate");
 
     let file = File::make_fake_file();
