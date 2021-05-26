@@ -27,6 +27,11 @@ void rust_helper_init_wait(struct wait_queue_entry *wq_entry)
 {
 }
 
+void *rust_helper_kmap(struct page *page)
+{
+	return 0;
+}
+
 void rust_helper_kunmap(struct page *page)
 {
 }
@@ -34,4 +39,27 @@ void rust_helper_kunmap(struct page *page)
 int rust_helper_signal_pending(void)
 {
     return 0;
+}
+
+struct page *rust_helper_alloc_pages(gfp_t gfp_mask, unsigned int order)
+{
+	return 0;
+}
+
+void rust_helper_spin_lock_init(spinlock_t *lock, const char *name,
+				struct lock_class_key *key)
+{
+}
+
+void rust_helper_spin_lock(spinlock_t *lock)
+{
+}
+
+void rust_helper_spin_unlock(spinlock_t *lock)
+{
+}
+
+int rust_helper_current_pid(void)
+{
+	return 0;
 }

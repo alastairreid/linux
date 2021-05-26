@@ -171,3 +171,7 @@ unsafe extern "C" fn misc_register(_misc: *mut miscdevice) -> c_types::c_int {
 #[no_mangle]
 unsafe extern "C" fn misc_deregister(_misc: *mut miscdevice) {
 }
+
+#[no_mangle]
+unsafe extern "C" fn synchronize_rcu() {
+}
