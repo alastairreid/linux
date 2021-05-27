@@ -63,3 +63,11 @@ int rust_helper_current_pid(void)
 {
 	return 0;
 }
+
+void rust_begin_unwind(void *panic_info)
+{
+    extern void klee_print_expr(const char *msg, int _dummy);
+    extern void klee_abort(void);
+    klee_print_expr("RUST PANIC", 0);
+    klee_abort();
+}
