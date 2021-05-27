@@ -267,18 +267,28 @@ pub fn test_fileops2() -> Result<()> {
 
     let file = File::make_fake_file();
 
-    // write some data *before* reading
-    let wlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
-    // optional: verification_annotations::verifier::assume(wlen != 0); // read will block if zero
-    // optional: verification_annotations::verifier::assume(wlen < 0x10000); // avoid out of memory
-    // optional: let wlen = verification_annotations::verifier::sample(5, wlen); // enumerate 5 possible values
-    test_write(&file_state, &file, wlen as usize);
-
-    // read some data (will block if we have not written first)
-    let rlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
-    // optional: let rlen = verification_annotations::verifier::sample(5, rlen); // enumerate 5 possible values
-    // optional: verification_annotations::verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
-    test_read(&file_state, &file, rlen as usize);
+    let steps = 4; // try up to this many arbitrary operations
+    for _ in 0..=steps {
+        // make arbitrary choice of what to do next
+        match verification_annotations::verifier::VerifierNonDet::verifier_nondet(5u8) {
+            0 => {
+                // write some data *before* reading
+                let wlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
+                // optional: verification_annotations::verifier::assume(wlen != 0); // read will block if zero
+                // optional: verification_annotations::verifier::assume(wlen < 0x10000); // avoid out of memory
+                // optional: let wlen = verification_annotations::verifier::sample(5, wlen); // enumerate 5 possible values
+                test_write(&file_state, &file, wlen as usize);
+            },
+            1 => {
+                // read some data (will block if we have not written first)
+                let rlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
+                // optional: let rlen = verification_annotations::verifier::sample(5, rlen); // enumerate 5 possible values
+                // optional: verification_annotations::verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
+                test_read(&file_state, &file, rlen as usize);
+            },
+            _ => verification_annotations::verifier::reject() // ignore this path
+        }
+    }
 
     Ok(())
 }
