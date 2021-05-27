@@ -7,6 +7,7 @@ extra-$(CONFIG_RUST) += libmodule.so
 
 extra-$(CONFIG_RUST) += bindings_generated.rs
 obj-$(CONFIG_RUST) += alloc.o kernel.o
+obj-$(CONFIG_RUST) += verification_annotations.o
 obj-$(CONFIG_RUST) += rstubs.o
 obj-$(CONFIG_RUST) += stubs.o
 extra-$(CONFIG_RUST) += exports_alloc_generated.h exports_kernel_generated.h
@@ -173,6 +174,14 @@ $(objtree)/rust/kernel.o: private rustc_target_flags = --extern alloc \
     --extern build_error \
     --extern module=$(objtree)/rust/libmodule.so
 $(objtree)/rust/kernel.o: $(srctree)/rust/kernel/lib.rs $(objtree)/rust/alloc.o \
+    $(objtree)/rust/build_error.o \
+    $(objtree)/rust/libmodule.so $(objtree)/rust/bindings_generated.rs FORCE
+	$(call if_changed_dep,rustc_library)
+
+$(objtree)/rust/verification_annotations.o: private rustc_target_flags = --extern alloc \
+    --extern build_error \
+    --extern module=$(objtree)/rust/libmodule.so
+$(objtree)/rust/verification_annotations.o: $(srctree)/rust/verification_annotations/lib.rs $(objtree)/rust/alloc.o \
     $(objtree)/rust/build_error.o \
     $(objtree)/rust/libmodule.so $(objtree)/rust/bindings_generated.rs FORCE
 	$(call if_changed_dep,rustc_library)

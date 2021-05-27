@@ -515,6 +515,7 @@ KBUILD_RUSTC_TARGET := $(srctree)/arch/$(SRCARCH)/rust/target.json
 KBUILD_RUSTCFLAGS := --emit=dep-info,obj,metadata --edition=2018 \
 		     -Cpanic=abort -Cembed-bitcode=n -Clto=n -Crpath=n \
 		     -Cforce-unwind-tables=n -Ccodegen-units=1 \
+                     --cfg 'feature="verifier-klee"' \
 		     -Zbinary_dep_depinfo=y -Zsymbol-mangling-version=v0
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
