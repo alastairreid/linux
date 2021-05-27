@@ -194,9 +194,9 @@ fn mk_file_state<T: Sync, FS: FileOpener<T> + FileOperations>(reg: &Registration
     FS::open(&sema)
 }
 
-fn test_write<F: FileOperations>(file_state: &F, file: &File) {
+fn test_write<F: FileOperations>(file_state: &F, file: &File, len: usize) {
     pr_info!("Calling write");
-    let mut data = make_reader(128); // any size that kmalloc accepts should do here
+    let mut data = make_reader(len);
     let offset: u64 = 0;
     match FileOperations::write(file_state, file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("write error: {}", rc),
@@ -205,9 +205,9 @@ fn test_write<F: FileOperations>(file_state: &F, file: &File) {
     pr_info!("Called write");
 }
 
-fn test_read<F: FileOperations>(file_state: &F, file: &File) {
+fn test_read<F: FileOperations>(file_state: &F, file: &File, len: usize) {
     pr_info!("Calling read");
-    let mut data = make_writer(128); // any size that kmalloc accepts should do here
+    let mut data = make_writer(len);
     let offset: u64 = 0;
     match FileOperations::read(file_state, file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("read error: {}", rc),
@@ -237,10 +237,48 @@ pub fn test_fileops() -> Result<()> {
     let file = File::make_fake_file();
 
     // write some data *before* reading
-    test_write(&file_state, &file);
+    test_write(&file_state, &file, 128);
 
     // read some data (will block if we have not written first)
-    test_read(&file_state, &file);
+    test_read(&file_state, &file, 128);
+
+    Ok(())
+}
+
+use verification_annotations;
+
+#[no_mangle]
+pub fn test_fileops2() -> Result<()> {
+    let registration = &RustSemaphore::init()?._dev;
+    pr_info!("Initialized");
+
+    // 1) Use RustSemaphore::init() to create module state sema
+    // 2) Use FileState::open(sema) to get Box<FileState>
+    // 3) Test the following operations
+    //    - read // should block unless semaphore >= 1
+    //    - write // increments semaphore by either 1 or write size (can't figure out which)
+    //    - ioctl.read(IOCTL_GET_READ_COUNT)
+    //    - ioctl.write(IOCTL_SET_READ_COUNT)
+    //    - and all other operations
+
+    // get a FileState
+    let file_state = *mk_file_state::<Arc<Semaphore>, FileState>(registration)?;
+    pr_info!("Got filestate");
+
+    let file = File::make_fake_file();
+
+    // write some data *before* reading
+    let wlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
+    verification_annotations::verifier::assume(wlen != 0); // read will block if zero
+    // optional: verification_annotations::verifier::assume(wlen < 0x10000); // avoid out of memory
+    // optional: let wlen = verification_annotations::verifier::sample(5, wlen); // enumerate 5 possible values
+    test_write(&file_state, &file, wlen as usize);
+
+    // read some data (will block if we have not written first)
+    let rlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
+    // optional: let rlen = verification_annotations::verifier::sample(5, rlen); // enumerate 5 possible values
+    // optional: verification_annotations::verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
+    test_read(&file_state, &file, rlen as usize);
 
     Ok(())
 }
