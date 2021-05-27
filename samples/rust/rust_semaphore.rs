@@ -269,7 +269,7 @@ pub fn test_fileops2() -> Result<()> {
 
     // write some data *before* reading
     let wlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
-    verification_annotations::verifier::assume(wlen != 0); // read will block if zero
+    // optional: verification_annotations::verifier::assume(wlen != 0); // read will block if zero
     // optional: verification_annotations::verifier::assume(wlen < 0x10000); // avoid out of memory
     // optional: let wlen = verification_annotations::verifier::sample(5, wlen); // enumerate 5 possible values
     test_write(&file_state, &file, wlen as usize);

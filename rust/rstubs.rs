@@ -61,8 +61,13 @@ unsafe extern "C" fn prepare_to_wait_exclusive(
     ) {
 }
 
+use verification_annotations::verifier;
+
 #[no_mangle]
 unsafe extern "C" fn schedule() {
+    extern "C" { pub fn klee_print_expr(msg: *const u8, _dummy: i32); }
+    klee_print_expr("KLEE: terminating blocked thread".as_bytes().as_ptr(), 0);
+    verifier::reject();
 }
 
 #[no_mangle]
