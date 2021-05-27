@@ -245,29 +245,29 @@ pub fn test_fileops() -> Result<()> {
     Ok(())
 }
 
-use verification_annotations;
+use verification_annotations::{verifier, verifier::VerifierNonDet};
 
 /// Perform arbitrary sequence of file operations of length `steps`
 fn test_sequence_of_fileops<F: FileOperations>(file_state: &F, file: &File, steps: usize) {
     for _ in 0..steps {
         // make arbitrary choice of what to do next
-        match verification_annotations::verifier::VerifierNonDet::verifier_nondet(5u8) {
+        match u8::verifier_nondet(5) {
             0 => {
-                // write some data *before* reading
-                let wlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
-                // optional: verification_annotations::verifier::assume(wlen != 0); // read will block if zero
-                // optional: verification_annotations::verifier::assume(wlen < 0x10000); // avoid out of memory
-                // optional: let wlen = verification_annotations::verifier::sample(5, wlen); // enumerate 5 possible values
+                // write some data
+                let wlen = u32::verifier_nondet(5);
+                // optional: verifier::assume(wlen != 0); // writes of length 0 don't bump semaphore
+                // optional: verifier::assume(wlen < 0x10000); // avoid out of memory
+                // optional: let wlen = verifier::sample(5, wlen); // enumerate 5 possible values
                 test_write(file_state, file, wlen as usize);
             },
             1 => {
-                // read some data (will block if we have not written first)
-                let rlen: u32 = verification_annotations::verifier::VerifierNonDet::verifier_nondet(5);
-                // optional: let rlen = verification_annotations::verifier::sample(5, rlen); // enumerate 5 possible values
-                // optional: verification_annotations::verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
+                // read some data
+                let rlen = u32::verifier_nondet(5);
+                // optional: let rlen = verifier::sample(5, rlen); // enumerate 5 possible values
+                // optional: verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
                 test_read(file_state, file, rlen as usize);
             },
-            _ => verification_annotations::verifier::reject() // ignore this path
+            _ => verifier::reject() // ignore this path
         }
     }
 }
