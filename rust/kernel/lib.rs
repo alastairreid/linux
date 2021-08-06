@@ -37,6 +37,11 @@ compile_error!("Missing kernel configuration for conditional compilation");
 #[cfg(not(testlib))]
 mod allocator;
 
+// todo: add #[cfg(...)]
+mod rstubs;
+// todo: add #[cfg(...)]
+// mod verification_annotations;
+
 #[doc(hidden)]
 pub mod bindings;
 
