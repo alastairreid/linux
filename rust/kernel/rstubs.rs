@@ -14,6 +14,11 @@ use kernel::bindings::*;
 use kernel::c_types;
 
 #[no_mangle]
+pub fn cdev_alloc() -> *mut cdev {
+    core::ptr::null_mut()
+}
+
+#[no_mangle]
 unsafe extern "C" fn cdev_init(_arg1: *mut cdev, _arg2: *const file_operations) {
 }
 
@@ -24,6 +29,20 @@ unsafe extern "C" fn cdev_add(_arg1: *mut cdev, _arg2: dev_t, _arg3: c_types::c_
 
 #[no_mangle]
 unsafe extern "C" fn cdev_del(_arg1: *mut cdev) {
+}
+
+#[no_mangle]
+pub fn errname(err: c_types::c_int) -> *const c_types::c_char {
+    core::ptr::null()
+}
+
+#[no_mangle]
+pub fn iov_iter_zero(bytes: usize, arg1: *mut iov_iter) -> usize {
+    0
+}
+
+#[no_mangle]
+pub fn platform_driver_unregister(arg1: *mut platform_driver) {
 }
 
 // Can't define this in Rust because it is variadic

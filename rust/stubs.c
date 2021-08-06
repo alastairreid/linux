@@ -23,6 +23,11 @@ unsigned long rust_helper_copy_to_user(void __user *to, const void *from, unsign
 	return 0;
 }
 
+unsigned long rust_helper_clear_user(void __user *to, unsigned long n)
+{
+	return 0;
+}
+
 void rust_helper_init_wait(struct wait_queue_entry *wq_entry)
 {
 }
@@ -34,6 +39,21 @@ void *rust_helper_kmap(struct page *page)
 
 void rust_helper_kunmap(struct page *page)
 {
+}
+
+int rust_helper_cond_resched(void)
+{
+	return 0;
+}
+
+size_t rust_helper_copy_from_iter(void *addr, size_t bytes, struct iov_iter *i)
+{
+	return 0;
+}
+
+size_t rust_helper_copy_to_iter(const void *addr, size_t bytes, struct iov_iter *i)
+{
+	return 0;
 }
 
 int rust_helper_signal_pending(void)

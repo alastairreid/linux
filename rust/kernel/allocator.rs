@@ -18,7 +18,7 @@ unsafe impl GlobalAlloc for KernelAllocator {
         extern "C" {
             pub fn realloc(arg1: *const c_types::c_void, arg2: usize) -> *mut c_types::c_void;
         }
-        realloc(ptr::null(), layout.size()) as *mut u8
+        unsafe { realloc(ptr::null(), layout.size()) as *mut u8 }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {

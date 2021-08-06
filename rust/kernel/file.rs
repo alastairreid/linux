@@ -46,12 +46,12 @@ impl File {
     }
 
     /// For testing purposes, we can make a file out of nothing
-    /// Note that this only works as long as the code being tested
+    /// Note that this only 'works' as long as the code being tested
     /// does not use any of the other methods.
     /// (This is a hack)
-    pub fn make_fake_file() -> File {
-        let fptr: *const bindings::file = core::ptr::null();
-        unsafe { File::from_ptr(fptr) }
+    pub fn make_fake_file() -> Self {
+        let ptr: *mut bindings::file = core::ptr::null_mut();
+        Self { ptr }
     }
 
 }
