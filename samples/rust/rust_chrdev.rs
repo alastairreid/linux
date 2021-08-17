@@ -56,24 +56,32 @@ impl Drop for RustChrdev {
     }
 }
 
-#[no_mangle]
-pub fn test_fileops() -> Result<()> {
-    let f: Box<RustFile> = Box::new(RustFile{});
+use kernel::user_ptr::UserSlicePtrWriter;
+use kernel::file_operations::FileOpener;
 
-    let len: usize = 128; // any size that kmalloc accepts should do here
+fn make_writer(len: usize) -> UserSlicePtrWriter {
     let mut data: Vec<u8> = Vec::with_capacity(len);
-    let buf: *mut u8 = data.as_mut_ptr();
+    unsafe { UserSlicePtr::new(data.as_mut_ptr() as *mut c_types::c_void, len).writer() }
+}
 
-    let file: File = File::make_fake_file();
-    let mut data = unsafe { UserSlicePtr::new(buf as *mut c_types::c_void, len).writer() };
+fn test_read<F: FileOperations>(file_state: &F, file: &File, len: usize) {
+    pr_info!("Calling read");
+    let mut data = make_writer(len);
     let offset: u64 = 0;
-
-    // note: we expect the following to fail because the above code does
-    // not implement any FileOperations so we should get EINVAL
-    match f.read(&file, &mut data, offset) {
+    match FileOperations::read(file_state, file, &mut data, offset) {
         Err(Error(rc)) => pr_info!("read error: {}", rc),
         Ok(sz) => pr_info!("read {} bytes", sz),
     }
+    pr_info!("Called read");
+}
+
+#[no_mangle]
+pub fn test_fileops() -> Result<()> {
+    let ctx = ();
+    let f: Box<RustFile> = RustFile::open(&ctx)?;
+
+    let file = File::make_fake_file();
+    test_read(&*f, &file, 128);
 
     Ok(())
 }
