@@ -245,44 +245,48 @@ pub fn test_fileops() -> Result<()> {
     Ok(())
 }
 
-use verification_annotations::{verifier, verifier::VerifierNonDet};
+#[cfg(feature = "verifier-klee")]
+mod verify {
+    use verification_annotations::{verifier, verifier::VerifierNonDet};
+    use super::*;
 
-/// Perform arbitrary sequence of file operations of length `steps`
-fn test_sequence_of_fileops<F: FileOperations>(file_state: &F, file: &File, steps: usize) {
-    for _ in 0..steps {
-        // make arbitrary choice of what to do next
-        match u8::verifier_nondet(5) {
-            0 => {
-                // write some data
-                let wlen = u32::verifier_nondet(5);
-                // optional: verifier::assume(wlen != 0); // writes of length 0 don't bump semaphore
-                // optional: verifier::assume(wlen < 0x10000); // avoid out of memory
-                // optional: let wlen = verifier::sample(5, wlen); // enumerate 5 possible values
-                test_write(file_state, file, wlen as usize);
-            },
-            1 => {
-                // read some data
-                let rlen = u32::verifier_nondet(5);
-                // optional: let rlen = verifier::sample(5, rlen); // enumerate 5 possible values
-                // optional: verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
-                test_read(file_state, file, rlen as usize);
-            },
-            _ => verifier::reject() // ignore this path
+    /// Perform arbitrary sequence of file operations of length `steps`
+    fn test_sequence_of_fileops<F: FileOperations>(file_state: &F, file: &File, steps: usize) {
+        for _ in 0..steps {
+            // make arbitrary choice of what to do next
+            match u8::verifier_nondet(5) {
+                0 => {
+                    // write some data
+                    let wlen = u32::verifier_nondet(5);
+                    // optional: verifier::assume(wlen != 0); // writes of length 0 don't bump semaphore
+                    // optional: verifier::assume(wlen < 0x10000); // avoid out of memory
+                    // optional: let wlen = verifier::sample(5, wlen); // enumerate 5 possible values
+                    test_write(file_state, file, wlen as usize);
+                },
+                1 => {
+                    // read some data
+                    let rlen = u32::verifier_nondet(5);
+                    // optional: let rlen = verifier::sample(5, rlen); // enumerate 5 possible values
+                    // optional: verifier::assume(rlen >= 0x8000_0000); // restrict to out of memory executions
+                    test_read(file_state, file, rlen as usize);
+                },
+                _ => verifier::reject() // ignore this path
+            }
         }
     }
-}
 
-#[no_mangle]
-pub fn test_fileops2() -> Result<()> {
-    let registration = &RustSemaphore::init()?._dev;
-    pr_info!("Initialized");
+    #[no_mangle]
+    pub fn test_fileops2() -> Result<()> {
+        let registration = &RustSemaphore::init()?._dev;
+        pr_info!("Initialized");
 
-    let file_state: FileState = *mk_file_state::<Arc<Semaphore>, FileState>(registration)?;
-    pr_info!("Got filestate");
+        let file_state: FileState = *mk_file_state::<Arc<Semaphore>, FileState>(registration)?;
+        pr_info!("Got filestate");
 
-    let file = File::make_fake_file();
+        let file = File::make_fake_file();
 
-    test_sequence_of_fileops(&file_state, &file, 4);
+        test_sequence_of_fileops(&file_state, &file, 4);
 
-    Ok(())
+        Ok(())
+    }
 }
